@@ -16,9 +16,9 @@ def pair_selection_MSD(prices_df:pd.DataFrame) -> pd.DataFrame:
     
     return selection_ranked
 
-def log_return(df:pd.DataFrame) -> pd.DataFrame:
+def log_return(prices_df:pd.DataFrame) -> pd.DataFrame:
     rtn_df = pd.DataFrame()
-    for crypto in list(df.columns):
-        rtn_df['crypto'] = np.log(df.loc[:,crypto] / df.loc[:,crypto].shift(1))
+    for crypto in list(prices_df.columns):
+        rtn_df['crypto'] = np.log(prices_df.loc[:,crypto] / prices_df.loc[:,crypto].shift(1))
 
     return rtn_df
