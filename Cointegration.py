@@ -34,10 +34,3 @@ def cointegration_test(prices_df: pd.DataFrame, alpha: float=0.05) -> pd.DataFra
     result_df_ranked = result_df.set_index('pair').sort_values('p-value')
 
     return result_df_ranked
-
-def log_return(prices_df:pd.DataFrame) -> pd.DataFrame:
-    rtn_df = pd.DataFrame()
-    for crypto in prices_df.columns:
-        rtn_df[f'{crypto}'] = np.log(prices_df.loc[:,crypto] / prices_df.loc[:,crypto].shift(1))
-
-    return rtn_df
