@@ -58,6 +58,16 @@ dependencies:
   - win_inet_pton=1.1.0=py310h5588dad_3
   - xz=5.2.5=h62dcd97_1
   - pip:
-    - charset-normalizer==2.0.10
-    - requests==2.27.1
-    - tradingview-ta==3.2.10
+    - async-generator==1.10
+    - attrs==21.4.0
+    - chromedriver-autoinstaller==0.3.1
+    - h11==0.12.0
+    - outcome==1.1.0
+    - selenium==4.1.0
+    - sniffio==1.2.0
+    - sortedcontainers==2.4.0
+    - trio==0.19.0
+    - trio-websocket==0.9.2
+    - tvdatafeed==1.2.1
+    - websocket-client==1.2.3
+    - wsproto==1.0.0
