@@ -56,4 +56,4 @@ class ForecastModel:
                    f'VaR-{VaR_alpha[0]*100}%': VaR[0], f'VaR-{VaR_alpha[1]*100}%': VaR[1]}
             forecast_df = forecast_df.append(tmp, ignore_index=True)
 
-        return forecast_df
+        return forecast_df.set_index('datetime')
