@@ -51,7 +51,7 @@ class ForecastModel:
             cond_var = forecast.variance.iloc[1, 0]
 
             q = self.am.distribution.ppf(VaR_alpha, res.params[-2:])
-            VaR = -cond_mean - np.sqrt(cond_var) * q
+            VaR = cond_mean + np.sqrt(cond_var) * q
             tmp = {'datetime': datetime, 'cond_mean': cond_mean, 'cond_var': cond_var,
                    f'VaR-{VaR_alpha[0]*100}%': VaR[0], f'VaR-{VaR_alpha[1]*100}%': VaR[1]}
             forecast_df = forecast_df.append(tmp, ignore_index=True)
