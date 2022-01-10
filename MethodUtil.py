@@ -8,10 +8,12 @@ from arch.typing import DateLike
 from arch.univariate import *
 from statsmodels.tsa.stattools import coint
 
+def price_normalization(prices_df: pd.DataFrame):
+    normalized_prices_df: pd.DataFrame = (prices_df-prices_df.mean())/prices_df.std()
+    return normalized_prices_df
 
 def pair_selection_MSD(prices_df: pd.DataFrame) -> pd.DataFrame:
-    normalized_prices_df: pd.DataFrame = (
-        prices_df-prices_df.mean())/prices_df.std()
+    normalized_prices_df = price_normalization(prices_df)
     pair_list = []
     MSD_list = []
     for pair in combinations(normalized_prices_df.columns, 2):
