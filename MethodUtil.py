@@ -6,11 +6,23 @@ import numpy as np
 import pandas as pd
 from arch.typing import DateLike
 from arch.univariate import *
+from scipy.stats import jarque_bera
 from statsmodels.tsa.stattools import coint
 
-def price_normalization(prices_df: pd.DataFrame):
-    normalized_prices_df: pd.DataFrame = (prices_df-prices_df.mean())/prices_df.std()
+
+def price_normalization(prices_df: pd.DataFrame) -> pd.DataFrame:
+    normalized_prices_df: pd.DataFrame = (
+        prices_df-prices_df.mean())/prices_df.std()
     return normalized_prices_df
+
+
+def descriptive_statistics(return_df: pd.DataFrame) -> pd.DataFrame:
+    df_tmp = pd.concat([return_df.kurtosis(), return_df.apply(jarque_bera).iloc[1]], keys=[
+                       'excess kurtosis', 'jarque bera test(p-value)'], axis='columns')
+    return_df = pd.concat(
+        [return_df.describe(include='all').T, df_tmp], axis='columns')
+    return return_df
+
 
 def pair_selection_MSD(prices_df: pd.DataFrame) -> pd.DataFrame:
     normalized_prices_df = price_normalization(prices_df)
@@ -148,7 +160,8 @@ class Strategy:
         money = countA * priceA[-1] + countB * priceB[-1]
         returnA = ((priceA[-1] - priceA[0])/priceA[0])*100
         returnB = ((priceB[-1] - priceB[0])/priceB[0])*100
-        pair_return = ((money - (priceA[0]+priceB[0]))/(priceA[0]+priceB[0]))*100
+        pair_return = (
+            (money - (priceA[0]+priceB[0]))/(priceA[0]+priceB[0]))*100
 
         tmp_dict = {'Currency A': [self.pair[0]], 'A Return%': returnA,
                     'Currency B': [self.pair[1]], 'B Return%': returnB,
