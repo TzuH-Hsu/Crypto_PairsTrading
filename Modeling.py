@@ -46,20 +46,29 @@ class ForecastModel:
         forecast_df = pd.DataFrame(columns=[
                                    'datetime', 'cond_mean', 'cond_var', f'VaR-{VaR_alpha[0]*100}%', f'VaR-{VaR_alpha[1]*100}%'])
         for i in range(data_total_days-window):
-            res = self.am.fit(first_obs=data_start_date+timedelta(days=i),
-                              last_obs=data_start_date+timedelta(days=window+i), disp='off')
+            res = self.am.fit(first_obs=data_start_date + timedelta(days=i),
+                              last_obs=data_start_date + timedelta(days=window+i),
+                              disp='off', options={'maxiter': 200}, tol=1e-05)
             forecast = res.forecast(reindex=False, align='target')
             datetime = forecast.mean.iloc[1].name
             cond_mean = forecast.mean.iloc[1, 0]
             cond_var = forecast.variance.iloc[1, 0]
 
-            q = self.am.distribution.ppf(VaR_alpha, res.params[-2:])
+            if type(self.am.distribution) == StudentsT:
+                params = res.params[-1:]
+            elif type(self.am.distribution) == SkewStudent:
+                params = res.params[-2:]
+            else:
+                params = None
+
+            q = self.am.distribution.ppf(VaR_alpha, params)
             VaR = cond_mean + np.sqrt(cond_var) * q
             tmp = {'datetime': datetime, 'cond_mean': cond_mean, 'cond_var': cond_var,
                    f'VaR-{VaR_alpha[0]*100}%': VaR[0], f'VaR-{VaR_alpha[1]*100}%': VaR[1]}
             forecast_df = forecast_df.append(tmp, ignore_index=True)
 
         self.result = forecast_df.set_index('datetime')
+        return res.summary()
 
 
 class Strategy:
@@ -104,7 +113,7 @@ class Strategy:
         tmp_dict = {'Currency A': [self.pair[0]], 'A Return%': returnA,
                     'Currency B': [self.pair[1]], 'B Return%': returnB,
                     'trades': trade_countA+trade_countB,
-                    'trades A->B': trade_countA, 
+                    'trades A->B': trade_countA,
                     'trades B->A': trade_countB,
                     'Pair Return%': pair_return}
 
