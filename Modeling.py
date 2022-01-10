@@ -1,8 +1,10 @@
+from ast import literal_eval
 from datetime import timedelta
 from itertools import combinations
 
 import numpy as np
 import pandas as pd
+from arch.typing import DateLike
 from arch.univariate import *
 
 
@@ -28,8 +30,9 @@ def return_spreads(return_df: pd.DataFrame) -> pd.DataFrame:
 
 
 class ForecastModel:
-    def __init__(self, spread: pd.Series) -> None:
-        self.spread = spread
+    def __init__(self, spread_df: pd.DataFrame, pair: str) -> None:
+        self.pair = pair
+        self.spread = spread_df[pair]
 
     def modelspec(self, vol: GARCH | EGARCH, dist: Normal | StudentsT | SkewStudent):
         self.am = ARX(self.spread, lags=1, rescale=False)
@@ -55,5 +58,50 @@ class ForecastModel:
             tmp = {'datetime': datetime, 'cond_mean': cond_mean, 'cond_var': cond_var,
                    f'VaR-{VaR_alpha[0]*100}%': VaR[0], f'VaR-{VaR_alpha[1]*100}%': VaR[1]}
             forecast_df = forecast_df.append(tmp, ignore_index=True)
-        
+
         self.result = forecast_df.set_index('datetime')
+
+
+class Strategy:
+    def __init__(self, price_df: pd.DataFrame, model: ForecastModel) -> None:
+        self.pair = literal_eval(model.pair)
+        self.spread = model.spread
+        self.priceA = price_df[self.pair[0]]
+        self.priceB = price_df[self.pair[1]]
+        self.forecast_len = len(model.result)
+        self.upperVaR = model.result.iloc[:, -2]
+        self.lowerVaR = model.result.iloc[:, -1]
+
+    def performance(self, date_start: DateLike):
+        priceA = self.priceA[date_start:]
+        priceB = self.priceB[date_start:]
+        money = 0
+        countA = 1
+        countB = 1
+        ratios = priceA/priceB
+        trade_count = 0
+
+        for i in range(self.forecast_len):
+            if (self.spread[i] > self.upperVaR[i]) and (countA > 0):
+                money += priceA[i] - priceB[i] * ratios[i]
+                countA -= 1
+                countB += ratios[i]
+                trade_count += 1
+
+            if (self.spread[i] < self.lowerVaR[i]) and (countB > 0):
+                money -= priceA[i] - priceB[i] * ratios[i]
+                countA += 1
+                countB -= ratios[i]
+                trade_count += 1
+
+        money = countA * priceA[-1] + countB * priceB[-1]
+        returnA = ((priceA[-1] - priceA[0])/priceA[0])*100
+        returnB = ((priceB[-1] - priceB[0])/priceB[0])*100
+        pair_return = ((money - (priceA[0]+priceB[0]))/(priceA[0]+priceB[0]))*100
+        tmp_dict = {'Currency A': [self.pair[0]], 'A Return%': returnA,
+                    'Currency B': [self.pair[1]], 'B Return%': returnB,
+                    'trades': trade_count, 'Pair Return%': pair_return}
+
+        result = pd.DataFrame(tmp_dict)
+
+        return result
