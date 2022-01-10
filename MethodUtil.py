@@ -6,6 +6,43 @@ import numpy as np
 import pandas as pd
 from arch.typing import DateLike
 from arch.univariate import *
+from statsmodels.tsa.stattools import coint
+
+
+def pair_selection_MSD(prices_df: pd.DataFrame) -> pd.DataFrame:
+    normalized_prices_df: pd.DataFrame = (
+        prices_df-prices_df.mean())/prices_df.std()
+    pair_list = []
+    MSD_list = []
+    for pair in combinations(normalized_prices_df.columns, 2):
+        pair_list.append(str(pair))
+        MSD_list.append(sum(
+            (normalized_prices_df.loc[:, pair[0]] - normalized_prices_df.loc[:, pair[1]]) ** 2))
+
+    selection = pd.DataFrame({'pair': pair_list, 'MSD': MSD_list})
+    selection_ranked = selection.set_index('pair').sort_values('MSD')
+
+    return selection_ranked
+
+
+def cointegration_test(prices_df: pd.DataFrame, alpha: float = 0.05) -> pd.DataFrame:
+    pair_list = []
+    score_list = []
+    pvalue_list = []
+    cointegration_list = []
+    for pair in combinations(prices_df.columns, 2):
+        pair_list.append(str(pair))
+        score, pvalue, _ = coint(
+            prices_df.loc[:, pair[0]], prices_df.loc[:, pair[1]])
+        cointegration = True if (pvalue <= alpha) else False
+        score_list.append(score)
+        pvalue_list.append(pvalue)
+        cointegration_list.append(cointegration)
+    result_df = pd.DataFrame({'pair': pair_list, 'score': score_list,
+                             'p-value': pvalue_list, 'cointegration': cointegration_list})
+    result_df_ranked = result_df.set_index('pair').sort_values('p-value')
+
+    return result_df_ranked
 
 
 def log_return(prices_df: pd.DataFrame) -> pd.DataFrame:
@@ -47,7 +84,8 @@ class ForecastModel:
                                    'datetime', 'cond_mean', 'cond_var', f'VaR-{VaR_alpha[0]*100}%', f'VaR-{VaR_alpha[1]*100}%'])
         for i in range(data_total_days-window):
             res = self.am.fit(first_obs=data_start_date + timedelta(days=i),
-                              last_obs=data_start_date + timedelta(days=window+i),
+                              last_obs=data_start_date +
+                              timedelta(days=window+i),
                               disp='off', options={'maxiter': 200}, tol=1e-05)
             forecast = res.forecast(reindex=False, align='target')
             datetime = forecast.mean.iloc[1].name
