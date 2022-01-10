@@ -69,38 +69,44 @@ class Strategy:
         self.priceA = price_df[self.pair[0]]
         self.priceB = price_df[self.pair[1]]
         self.forecast_len = len(model.result)
-        self.upperVaR = model.result.iloc[:, -2]
-        self.lowerVaR = model.result.iloc[:, -1]
+        self.upperVaR = model.result.iloc[:, -1]
+        self.lowerVaR = model.result.iloc[:, -2]
 
     def performance(self, date_start: DateLike):
+        spread = self.spread[date_start:]
         priceA = self.priceA[date_start:]
         priceB = self.priceB[date_start:]
         money = 0
         countA = 1
         countB = 1
         ratios = priceA/priceB
-        trade_count = 0
+        trade_countA = 0
+        trade_countB = 0
 
         for i in range(self.forecast_len):
-            if (self.spread[i] > self.upperVaR[i]) and (countA > 0):
+            if (spread[i] > self.upperVaR[i]) and (countA > 0):
                 money += priceA[i] - priceB[i] * ratios[i]
                 countA -= 1
                 countB += ratios[i]
-                trade_count += 1
+                trade_countA += 1
 
-            if (self.spread[i] < self.lowerVaR[i]) and (countB > 0):
+            if (spread[i] < self.lowerVaR[i]) and (countB > 0):
                 money -= priceA[i] - priceB[i] * ratios[i]
                 countA += 1
                 countB -= ratios[i]
-                trade_count += 1
+                trade_countB += 1
 
         money = countA * priceA[-1] + countB * priceB[-1]
         returnA = ((priceA[-1] - priceA[0])/priceA[0])*100
         returnB = ((priceB[-1] - priceB[0])/priceB[0])*100
         pair_return = ((money - (priceA[0]+priceB[0]))/(priceA[0]+priceB[0]))*100
+
         tmp_dict = {'Currency A': [self.pair[0]], 'A Return%': returnA,
                     'Currency B': [self.pair[1]], 'B Return%': returnB,
-                    'trades': trade_count, 'Pair Return%': pair_return}
+                    'trades': trade_countA+trade_countB,
+                    'trades A->B': trade_countA, 
+                    'trades B->A': trade_countB,
+                    'Pair Return%': pair_return}
 
         result = pd.DataFrame(tmp_dict)
 
